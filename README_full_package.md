@@ -307,9 +307,14 @@ For enemy AI: same gravity-redirection tick logic, steering toward
 - POI-flatten-mask awareness in the nav grid — nav grid currently samples raw noise.
 - Distance-based streaming for POI buildings — currently always-spawned; untested at
   large building counts.
-- `SeaLevel` unit consistency — worth a pass if ocean-adjacent bugs reappear (terrain
-  and ocean shell historically used slightly different unit conventions for this
-  value; may already be resolved, verify before assuming).
+- ~~`SeaLevel` unit consistency~~ — **found and fixed**: `PlanetChunk.cpp`'s water
+  vertex-color check (`Height <= SeaLevel`) was comparing cm-domain `Height` against
+  meters-domain `SeaLevel` directly, unlike `PlanetOceanShell.cpp` and
+  `PlanetMath::IsPointUnderwater`, which both apply `SeaLevel * 100.0`. With the
+  default `SeaLevel = 1.0`, the water vertex-color paint essentially never triggered,
+  so land right up to the ocean shell rendered dry (grass/rock) instead of as
+  shoreline/underwater. Fixed by applying the same `* 100.0` conversion in
+  `PlanetChunk.cpp`. Fixed in both packages.
 - LOD split/merge tuning (`LODSplitFactor`, `MergeFrameThreshold`) is scale-dependent
   — re-tune after any significant `PlanetRadius` change.
 
