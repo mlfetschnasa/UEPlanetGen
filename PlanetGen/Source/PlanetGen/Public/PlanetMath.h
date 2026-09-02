@@ -16,16 +16,25 @@ enum class EPlanetCubeFace : uint8
 enum class EFaceEdge : uint8 { None, U_Pos, U_Neg, V_Pos, V_Neg };
 
 // Describes how a face's shared edge maps onto its neighbor's UV space.
-// IMPORTANT: this table (populated in PlanetMath.cpp via GetCubeNeighbor) is a first-draft
-// derivation from FaceUVToCubePoint below. Cube-face adjacency tables are notoriously easy
-// to get subtly wrong (one flipped axis out of 24 face/edge pairings). Validate visually
-// before relying on it for cross-face quadtree balancing — see Docs/SeamValidation.md.
+// Needs 3 independent bits to fully specify: which of the neighbor's two axes (U or V) is
+// the one pinned to the shared edge, which end of that pinned axis (+1 or -1) the edge sits
+// at, and which direction the neighbor's free axis runs relative to our own edge-sweep
+// coordinate. bFixedAxisPositive and bReverseVarying are kept as two SEPARATE bits — an
+// earlier version reused a single bFlipU/bFlipV bit for both roles, which conflated two
+// independent choices and made several of the 24 face/edge pairs geometrically
+// unrepresentable (confirmed by brute-force point-matching against FaceUVToCubePoint: every
+// one of the 24 old table entries produced a mismatched point, several with no valid
+// bFlipU/bFlipV combination existing at all). The table below was regenerated with this
+// 3-bit encoding and verified to reproduce identical 3D points to FaceUVToCubePoint at
+// densely-sampled points along all 24 edges. Still worth an in-PIE flight-test per
+// Docs/03_SeamValidation.md before trusting it for the actual split-cascade behavior end to
+// end — this only proves the coordinate transform itself is now correct.
 struct FCubeNeighbor
 {
 	EPlanetCubeFace NeighborFace = EPlanetCubeFace::PosZ;
-	bool bSwapUV = false; // does the neighbor's U axis correspond to our V axis?
-	bool bFlipU = false;  // is the neighbor's matching axis reversed?
-	bool bFlipV = false;
+	bool bSwapUV = false;            // true: neighbor's fixed (edge) axis is V when our edge ran along U, or vice versa.
+	bool bFixedAxisPositive = false; // true: the neighbor's fixed edge axis sits at +1.0 (else -1.0).
+	bool bReverseVarying = false;    // true: neighbor's free axis runs opposite our shared edge coordinate.
 };
 
 namespace PlanetMath
@@ -69,7 +78,7 @@ namespace PlanetMath
 	                                     TArray<EFaceEdge>& OutEdges);
 
 	// Static topology table: which face/axis-mapping lies across a given face+edge.
-	// See validation note on FCubeNeighbor above before trusting this for production seams.
+	// See the note on FCubeNeighbor above for how this was derived/verified.
 	PLANETGEN_API FCubeNeighbor GetCubeNeighbor(EPlanetCubeFace Face, EFaceEdge Edge);
 
 	// Inverse of FaceUVToCubePoint: given a unit-length direction (e.g. from

@@ -182,19 +182,14 @@ FPlanetQuadNode* FPlanetQuadtree::GetRootForFace(EPlanetCubeFace Face)
 void FPlanetQuadtree::ResolveNeighborUV(EPlanetCubeFace SourceFace, EFaceEdge SourceEdge, double SharedCoord,
                                          const FCubeNeighbor& Neighbor, double& OutU, double& OutV)
 {
-	double MatchingAxisValue; // the neighbor's fixed-edge coordinate (+-1.0)
-	switch (SourceEdge)
-	{
-		case EFaceEdge::U_Pos: MatchingAxisValue = Neighbor.bFlipU ? 1.0 : -1.0; break;
-		case EFaceEdge::U_Neg: MatchingAxisValue = Neighbor.bFlipU ? -1.0 : 1.0; break;
-		case EFaceEdge::V_Pos: MatchingAxisValue = Neighbor.bFlipV ? 1.0 : -1.0; break;
-		default:               MatchingAxisValue = Neighbor.bFlipV ? -1.0 : 1.0; break;
-	}
-	const double VaryingAxisValue = (Neighbor.bFlipU || Neighbor.bFlipV) ? -SharedCoord : SharedCoord;
+	// Which end of the neighbor's fixed (edge) axis we're on, and which direction its free
+	// axis runs, are independent choices -- see the FCubeNeighbor comment in PlanetMath.h.
+	const double FixedAxisValue = Neighbor.bFixedAxisPositive ? 1.0 : -1.0;
+	const double VaryingAxisValue = Neighbor.bReverseVarying ? -SharedCoord : SharedCoord;
 
 	const bool bSourceWasUEdge = (SourceEdge == EFaceEdge::U_Pos || SourceEdge == EFaceEdge::U_Neg);
 	const bool bNeighborUIsFixed = Neighbor.bSwapUV ? !bSourceWasUEdge : bSourceWasUEdge;
 
-	if (bNeighborUIsFixed) { OutU = MatchingAxisValue; OutV = VaryingAxisValue; }
-	else                   { OutU = VaryingAxisValue;  OutV = MatchingAxisValue; }
+	if (bNeighborUIsFixed) { OutU = FixedAxisValue;   OutV = VaryingAxisValue; }
+	else                   { OutU = VaryingAxisValue; OutV = FixedAxisValue; }
 }
