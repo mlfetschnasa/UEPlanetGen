@@ -243,8 +243,16 @@ For enemy AI: same gravity-redirection tick logic, steering toward
 
 ## Known Open Items / Deferred Work
 
-- Cross-face LOD balancing (`bEnableCrossFaceLODBalancing`) — implemented but flagged
-  as needing visual validation before trusting it; off by default.
+- Cross-face LOD balancing (`bEnableCrossFaceLODBalancing`) — off by default. The
+  `GetCubeNeighbor()` table it depends on was found to be **wrong on all 24 face/edge
+  entries** (a structural encoding bug, not a stray typo — `FCubeNeighbor` was reusing one
+  flip bit for two independent choices, making a fully correct table impossible with that
+  encoding). Fixed: `FCubeNeighbor` now has 3 independent bits, and the regenerated table
+  is verified by brute-force point-matching against `FaceUVToCubePoint()` to be
+  geometrically correct on all 24 edges (see the full package's `Docs/03_SeamValidation.md`
+  for the derivation). Still flagged off by default pending an in-PIE flight-test of the
+  actual split-cascade behavior (the fix proves the coordinate transform is correct, not
+  that the whole balancing pass is bug-free end to end). Fixed in both packages.
 - Cross-face navigation pathfinding — Phase 1 explicitly single-face only.
 - POI procedural/algorithmic scatter — Phase 1 is hand-placed only.
 - POI-flatten-mask awareness in the nav grid — nav grid currently samples raw noise.
