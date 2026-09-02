@@ -229,7 +229,10 @@ FChunkMeshData APlanetChunk::BuildMeshData(
 
 			float R = 0.f, G = 0.f, B = 0.f;
 
-			if (Height <= SeaLevel)
+			// SeaLevel is in meters (PlanetPreset.h); Height is cm-domain like PlanetRadius,
+			// so it needs the same *100 conversion PlanetOceanShell/IsPointUnderwater apply --
+			// without it this never matches in practice and land renders dry under the ocean shell.
+			if (Height <= SeaLevel * 100.0)
 			{
 				R = 1.0f; // Water -- G and B stay 0, so Snow derived = 0 too. Correct.
 			}
